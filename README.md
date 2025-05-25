@@ -22,6 +22,9 @@ A comprehensive Customer Relationship Management system for sales pipeline and o
 - Document management for leads/orders  
 - Responsive design for mobile use  
 
+## Flow-Diagram
+![Flow-Diagram](./assets/trackflowdiag.png)
+
 ## 🛠️ Setup
 
 ### Prerequisites
