@@ -1132,7 +1132,7 @@ const handleViewDocument = (filePath) => {
     // Extract just the filename from the full path
     const filename = filePath.split('/').pop();
     // Construct the URL to your backend's static files - remove /api from the path
-    const fileUrl = `http://localhost:8000/uploads/${filename}`;
+    const fileUrl = `https://trackflow-api.onrender.com/uploads/${filename}`;
     // Open in new tab
     window.open(fileUrl, '_blank');
   };
