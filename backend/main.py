@@ -11,13 +11,17 @@ import os
 import shutil
 from pathlib import Path
 
-# Database setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./trackflow.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# Database setup - Updated for PostgreSQL
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://username:password@host:port/database")
+
+# For Supabase, your connection string will look like:
+# postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
+
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Models
+# Models (unchanged)
 class Lead(Base):
     __tablename__ = "leads"
     
@@ -81,7 +85,7 @@ class Reminder(Base):
     lead = relationship("Lead", back_populates="reminders")
     order = relationship("Order", back_populates="reminders")
 
-# Pydantic models
+# Pydantic models (unchanged)
 class LeadBase(BaseModel):
     name: str
     contact: str
@@ -164,8 +168,12 @@ class DashboardStats(BaseModel):
     orders_dispatched: int
     pending_reminders: int
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Create tables - with error handling for production
+try:
+    Base.metadata.create_all(bind=engine)
+    print("Database tables created successfully")
+except Exception as e:
+    print(f"Error creating tables: {e}")
 
 # Create uploads directory
 uploads_dir = Path("uploads")
@@ -185,15 +193,30 @@ app.add_middleware(
 # Static files for uploads
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# Dependency
+# Dependency with error handling
 def get_db():
     db = SessionLocal()
     try:
         yield db
+    except Exception as e:
+        db.rollback()
+        raise e
     finally:
         db.close()
 
-# Lead endpoints
+# Health check endpoint
+@app.get("/health")
+def health_check():
+    try:
+        db = SessionLocal()
+        # Simple database connectivity test
+        db.execute("SELECT 1")
+        db.close()
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+
+# Lead endpoints (unchanged)
 @app.get("/api/leads", response_model=List[LeadResponse])
 def get_leads(db: Session = Depends(get_db)):
     return db.query(Lead).all()
@@ -251,7 +274,7 @@ def delete_lead(lead_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Lead deleted successfully"}
 
-# Order endpoints
+# Order endpoints (unchanged)
 @app.get("/api/orders", response_model=List[OrderResponse])
 def get_orders(db: Session = Depends(get_db)):
     return db.query(Order).all()
@@ -301,7 +324,7 @@ def delete_order(order_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Order deleted successfully"}
 
-# Reminder endpoints
+# Reminder endpoints (unchanged)
 @app.get("/api/reminders", response_model=List[ReminderResponse])
 def get_reminders(db: Session = Depends(get_db)):
     return db.query(Reminder).all()
@@ -328,7 +351,6 @@ def update_reminder(reminder_id: int, reminder: ReminderUpdate, db: Session = De
     db.refresh(db_reminder)
     return db_reminder
 
-
 @app.delete("/api/reminders/{reminder_id}")
 def delete_reminder(reminder_id: int, db: Session = Depends(get_db)):
     db_reminder = db.query(Reminder).filter(Reminder.id == reminder_id).first()
@@ -339,7 +361,7 @@ def delete_reminder(reminder_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Reminder deleted successfully"}
 
-# File upload endpoint
+# File upload endpoint (unchanged)
 @app.post("/api/upload/{entity_type}/{entity_id}")
 async def upload_file(entity_type: str, entity_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     if entity_type not in ["lead", "order"]:
@@ -408,7 +430,7 @@ def get_documents(entity_type: str, entity_id: int, db: Session = Depends(get_db
         for doc in documents
     ] if documents else []
     
-# Dashboard stats endpoint
+# Dashboard stats endpoint (unchanged)
 @app.get("/api/dashboard", response_model=DashboardStats)
 def get_dashboard_stats(db: Session = Depends(get_db)):
     total_leads = db.query(Lead).count()
