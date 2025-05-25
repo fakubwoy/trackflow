@@ -11,41 +11,13 @@ import os
 import shutil
 from pathlib import Path
 
-# Database setup - Updated for PostgreSQL
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:ggBO8FP8g7z4Kxl6@db.hxthhepshsbxzugzbpup.supabase.co:5432/postgres")
-
-# For Supabase, your connection string will look like:
-# postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
-
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    connect_args={
-        "connect_timeout": 60,
-        "sslmode": "require"
-    }
-)
+# Database setup
+SQLALCHEMY_DATABASE_URL = "sqlite:///./trackflow.db"
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-def create_tables():
-    try:
-        # Test connection first
-        with engine.connect() as connection:
-            connection.execute("SELECT 1")
-        
-        # Create tables if connection successful
-        Base.metadata.create_all(bind=engine)
-        print("Database tables created successfully")
-        return True
-    except Exception as e:
-        print(f"Error connecting to database: {e}")
-        print("Application will continue but database operations may fail")
-        return False
 
-# Call the function instead of direct table creation
-db_connected = create_tables()
-# Models (unchanged)
+# Models
 class Lead(Base):
     __tablename__ = "leads"
     
@@ -109,7 +81,7 @@ class Reminder(Base):
     lead = relationship("Lead", back_populates="reminders")
     order = relationship("Order", back_populates="reminders")
 
-# Pydantic models (unchanged)
+# Pydantic models
 class LeadBase(BaseModel):
     name: str
     contact: str
@@ -192,12 +164,8 @@ class DashboardStats(BaseModel):
     orders_dispatched: int
     pending_reminders: int
 
-# Create tables - with error handling for production
-try:
-    Base.metadata.create_all(bind=engine)
-    print("Database tables created successfully")
-except Exception as e:
-    print(f"Error creating tables: {e}")
+# Create tables
+Base.metadata.create_all(bind=engine)
 
 # Create uploads directory
 uploads_dir = Path("uploads")
@@ -217,30 +185,15 @@ app.add_middleware(
 # Static files for uploads
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# Dependency with error handling
+# Dependency
 def get_db():
     db = SessionLocal()
     try:
         yield db
-    except Exception as e:
-        db.rollback()
-        raise e
     finally:
         db.close()
 
-# Health check endpoint
-@app.get("/health")
-def health_check():
-    try:
-        db = SessionLocal()
-        # Simple database connectivity test
-        db.execute("SELECT 1")
-        db.close()
-        return {"status": "healthy", "database": "connected"}
-    except Exception as e:
-        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
-
-# Lead endpoints (unchanged)
+# Lead endpoints
 @app.get("/api/leads", response_model=List[LeadResponse])
 def get_leads(db: Session = Depends(get_db)):
     return db.query(Lead).all()
@@ -266,24 +219,7 @@ def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
         db.commit()
     
     return db_lead
-@app.get("/health")
-def health_check():
-    try:
-        with engine.connect() as connection:
-            connection.execute("SELECT 1")
-        return {"status": "healthy", "database": "connected"}
-    except Exception as e:
-        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
 
-# Add a root endpoint to fix the 404 errors:
-@app.get("/")
-def root():
-    return {
-        "message": "TrackFlow CRM API", 
-        "version": "1.0.0",
-        "status": "running",
-        "database": "connected" if db_connected else "disconnected"
-    }
 @app.put("/api/leads/{lead_id}", response_model=LeadResponse)
 def update_lead(lead_id: int, lead: LeadUpdate, db: Session = Depends(get_db)):
     db_lead = db.query(Lead).filter(Lead.id == lead_id).first()
@@ -315,7 +251,7 @@ def delete_lead(lead_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Lead deleted successfully"}
 
-# Order endpoints (unchanged)
+# Order endpoints
 @app.get("/api/orders", response_model=List[OrderResponse])
 def get_orders(db: Session = Depends(get_db)):
     return db.query(Order).all()
@@ -365,7 +301,7 @@ def delete_order(order_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Order deleted successfully"}
 
-# Reminder endpoints (unchanged)
+# Reminder endpoints
 @app.get("/api/reminders", response_model=List[ReminderResponse])
 def get_reminders(db: Session = Depends(get_db)):
     return db.query(Reminder).all()
@@ -392,6 +328,7 @@ def update_reminder(reminder_id: int, reminder: ReminderUpdate, db: Session = De
     db.refresh(db_reminder)
     return db_reminder
 
+
 @app.delete("/api/reminders/{reminder_id}")
 def delete_reminder(reminder_id: int, db: Session = Depends(get_db)):
     db_reminder = db.query(Reminder).filter(Reminder.id == reminder_id).first()
@@ -402,7 +339,7 @@ def delete_reminder(reminder_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Reminder deleted successfully"}
 
-# File upload endpoint (unchanged)
+# File upload endpoint
 @app.post("/api/upload/{entity_type}/{entity_id}")
 async def upload_file(entity_type: str, entity_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     if entity_type not in ["lead", "order"]:
@@ -470,8 +407,24 @@ def get_documents(entity_type: str, entity_id: int, db: Session = Depends(get_db
         }
         for doc in documents
     ] if documents else []
-    
-# Dashboard stats endpoint (unchanged)
+@app.get("/health")
+def health_check():
+    try:
+        with engine.connect() as connection:
+            connection.execute("SELECT 1")
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+
+# Add a root endpoint to fix the 404 errors:
+@app.get("/")
+def root():
+    return {
+        "message": "TrackFlow CRM API", 
+        "version": "1.0.0",
+        "status": "running",
+    }
+# Dashboard stats endpoint
 @app.get("/api/dashboard", response_model=DashboardStats)
 def get_dashboard_stats(db: Session = Depends(get_db)):
     total_leads = db.query(Lead).count()
