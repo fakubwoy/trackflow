@@ -2,33 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Toaster, toast } from 'react-hot-toast';
-import { 
-  Users, 
-  Package, 
-  Bell, 
-  BarChart3, 
-  Plus, 
-  Search,
-  Filter,
-  Calendar,
-  FileText,
-  Trash2,
-  Edit3,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  X,
-  Eye,
-  Save,
-  ArrowRight,
-  Phone,
-  Mail,
-  Building,
-  Tag,
-  MessageSquare,
-  Truck,
-  Package2
-} from 'lucide-react';
+import {   Users, Package, Bell,   BarChart3,   Plus,   Search,  Filter,  Calendar,FileText,Trash2,  Edit3,  CheckCircle,  Clock,  AlertCircle,  X,  Eye,  Save,  ArrowRight,  Phone,  Mail,  Building,  Tag,  MessageSquare,Truck,Package2} from 'lucide-react';
 import './App.css';
 
 // API Configuration
@@ -83,6 +57,7 @@ function App() {
   const [orders, setOrders] = useState([]);
   const [reminders, setReminders] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({});
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Fetch data functions
@@ -156,26 +131,32 @@ function App() {
 
   return (
     <AppContext.Provider value={contextValue}>
-      <Router>
-        <div className="app">
-          <Toaster position="top-right" />
-          <Sidebar />
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/leads" element={<LeadsPage />} />
-              <Route path="/orders" element={<OrdersPage />} />
-              <Route path="/reminders" element={<RemindersPage />} />
-            </Routes>
-          </main>
-        </div>
-      </Router>
-    </AppContext.Provider>
+    <Router>
+      <div className="app">
+        <Toaster position="top-right" />
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <main className="main-content">
+          <button 
+            className="mobile-menu-btn" 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? <X size={20} /> : <BarChart3 size={20} />}
+          </button>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/leads" element={<LeadsPage />} />
+            <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/reminders" element={<RemindersPage />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  </AppContext.Provider>
   );
 }
 
 // Sidebar Component
-function Sidebar() {
+function Sidebar({ sidebarOpen, setSidebarOpen }) {
   const location = useLocation();
   
   const menuItems = [
@@ -186,7 +167,7 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <h1>TrackFlow</h1>
       </div>
@@ -196,6 +177,7 @@ function Sidebar() {
             key={item.path}
             to={item.path}
             className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+            onClick={() => setSidebarOpen(false)}
           >
             <item.icon size={20} />
             <span>{item.label}</span>

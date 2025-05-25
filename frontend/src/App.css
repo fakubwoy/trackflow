@@ -952,3 +952,53 @@ body {
 .document-info small {
   color: var(--text-secondary);
 }
+/* Add these to the existing media queries section */
+@media (max-width: 640px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 260px;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: var(--border-radius);
+    border: none;
+    cursor: pointer;
+    z-index: 1001;
+    position: fixed;
+    bottom: 1rem;
+    left: 1rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .page-header {
+    padding-top: 3rem;
+  }
+
+  .search-box input {
+    width: 100%;
+  }
+
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
+
+  .kanban-column {
+    min-width: 100%;
+  }
+}
