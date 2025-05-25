@@ -1107,6 +1107,7 @@ function DocumentUpload({ entityType, entityId, onDocumentUploaded }) {
   const [uploading, setUploading] = useState(false);
   const [loadingDocs, setLoadingDocs] = useState(false);
 
+  
   useEffect(() => {
     const loadDocuments = async () => {
       if (!entityId) return;

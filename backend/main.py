@@ -328,6 +328,7 @@ def update_reminder(reminder_id: int, reminder: ReminderUpdate, db: Session = De
     db.refresh(db_reminder)
     return db_reminder
 
+
 @app.delete("/api/reminders/{reminder_id}")
 def delete_reminder(reminder_id: int, db: Session = Depends(get_db)):
     db_reminder = db.query(Reminder).filter(Reminder.id == reminder_id).first()
