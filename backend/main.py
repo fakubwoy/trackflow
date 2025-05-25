@@ -10,9 +10,14 @@ from typing import Optional, List
 import os
 import shutil
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Database setup
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:pzSmjIZqQrNRqexolsAsjFflPrLAbkMS@mainline.proxy.rlwy.net:34170/railway"
+SQLALCHEMY_DATABASE_URL =os.getenv("DATABASE_URL")
+
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"sslmode": "require"},
