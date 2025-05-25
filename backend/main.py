@@ -12,15 +12,39 @@ import shutil
 from pathlib import Path
 
 # Database setup - Updated for PostgreSQL
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://username:password@host:port/database")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:ggBO8FP8g7z4Kxl6@db.hxthhepshsbxzugzbpup.supabase.co:5432/postgres")
 
 # For Supabase, your connection string will look like:
 # postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=300,
+    connect_args={
+        "connect_timeout": 60,
+        "sslmode": "require"
+    }
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+def create_tables():
+    try:
+        # Test connection first
+        with engine.connect() as connection:
+            connection.execute("SELECT 1")
+        
+        # Create tables if connection successful
+        Base.metadata.create_all(bind=engine)
+        print("Database tables created successfully")
+        return True
+    except Exception as e:
+        print(f"Error connecting to database: {e}")
+        print("Application will continue but database operations may fail")
+        return False
 
+# Call the function instead of direct table creation
+db_connected = create_tables()
 # Models (unchanged)
 class Lead(Base):
     __tablename__ = "leads"
@@ -242,7 +266,24 @@ def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
         db.commit()
     
     return db_lead
+@app.get("/health")
+def health_check():
+    try:
+        with engine.connect() as connection:
+            connection.execute("SELECT 1")
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
 
+# Add a root endpoint to fix the 404 errors:
+@app.get("/")
+def root():
+    return {
+        "message": "TrackFlow CRM API", 
+        "version": "1.0.0",
+        "status": "running",
+        "database": "connected" if db_connected else "disconnected"
+    }
 @app.put("/api/leads/{lead_id}", response_model=LeadResponse)
 def update_lead(lead_id: int, lead: LeadUpdate, db: Session = Depends(get_db)):
     db_lead = db.query(Lead).filter(Lead.id == lead_id).first()
