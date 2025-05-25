@@ -496,19 +496,19 @@ function ListView({ leads, onUpdateLead, onDeleteLead, onEditLead }) {
           <tbody>
             {leads.map(lead => (
               <tr key={lead.id}>
-                <td>{lead.name}</td>
-                <td>{lead.company}</td>
-                <td>{lead.contact}</td>
-                <td>{lead.product_interest}</td>
-                <td>
+                <td data-label="Name">{lead.name}</td>
+                <td data-label="Company">{lead.company}</td>
+                <td data-label="Contact">{lead.contact}</td>
+                <td data-label="Product Interest">{lead.product_interest}</td>
+                <td data-label="Stage">
                   <span className={`stage-badge ${lead.stage.toLowerCase().replace(' ', '-')}`}>
                     {lead.stage}
                   </span>
                 </td>
-                <td>
+                <td data-label="Follow-up">
                   {lead.follow_up_date ? new Date(lead.follow_up_date).toLocaleDateString() : '-'}
                 </td>
-                <td>
+                <td data-label="Actions">
                   <div className="action-buttons">
                     <button onClick={() => onEditLead(lead)} className="btn-icon">
                       <Edit3 size={14} />
